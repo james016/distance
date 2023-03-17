@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共享测距</title>
+</head>
+<body>
+    <div>
+        <h1>您的ID: <span id="userId"></span></h1>
+        <label for="roomId">输入房间ID:</label>
+        <input type="text" id="roomId">
+        <button id="joinBtn">加入房间</button>
+        <button id="leaveBtn" disabled>离开房间</button>
+    </div>
+    <div>
+        <button id="refreshBtn" disabled>刷新距离</button>
+        <h3>上次刷新距离: <span id="lastRefreshTime">未刷新</span></h3>
+    </div>
+    <div>
+        <h2>距离列表:</h2>
+        <ul id="distanceList"></ul>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>
