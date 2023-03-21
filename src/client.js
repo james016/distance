@@ -36,7 +36,7 @@ class TrackingWebSocket extends WebSocket {
   
 
 // 请根据实际情况替换以下websocket地址
-const websocket = new TrackingWebSocket('wss://two_cars_demo.iap.hh-d.brainpp.cn/socket');
+let websocket = new TrackingWebSocket('wss://two_cars_demo_cjy.iap.hh-d.brainpp.cn/socket');
 // const websocket = new TrackingWebSocket('wss://diffusion-webui.iap.hh-d.brainpp.cn/');
 
 // 获取DOM元素
@@ -47,6 +47,7 @@ const leaveBtn = document.getElementById('leaveBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const lastRefreshTime = document.getElementById('lastRefreshTime');
 const distanceList = document.getElementById('distanceList');
+const ws_status = document.getElementById('ws_status');
 
 // 初始化
 console.log('Connecting to server...');
@@ -138,8 +139,19 @@ function leaveRoom() {
 
   distanceList.innerHTML = '';
 }
+
+function reconnect() {
+  websocket = new TrackingWebSocket('wss://two_cars_demo_cjy.iap.hh-d.brainpp.cn/socket');
   
+  websocket.addEventListener('open', onOpen);
+  websocket.addEventListener('message', onMessage);
+  websocket.addEventListener('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+}
+
 function refreshDistances() {
+
   navigator.geolocation.getCurrentPosition((position) => {
     const { latitude, longitude } = position.coords;
 
@@ -149,12 +161,18 @@ function refreshDistances() {
       });
     } else if (websocket.readyState === WebSocket.OPEN) {
       websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude } }));
-    } else {
+    } else if (websocket.readyState === WebSocket.CLOSED) {
+      console.log(websocket.readyState)
+      reconnect();
+      joinRoom();
+    }
+    else {
       console.error('WebSocket is not in the correct state to send a message.');
     }
 
     const now = new Date();
     lastRefreshTime.textContent = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    ws_status.textContent = websocket.readyState;
   });
 }
 
