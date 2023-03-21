@@ -1,30 +1,22 @@
 const http = require('http');
 const httpProxy = require('http-proxy');
+const https = require('https');
 const fs = require('fs');
 
 const proxy = httpProxy.createProxyServer();
 
-const https = require('https');
-
 const options = {
-	  key: fs.readFileSync('/etc/letsencrypt/live/james016.com/privkey.pem'),
-	  cert: fs.readFileSync('/etc/letsencrypt/live/james016.com/fullchain.pem')
+  key: fs.readFileSync('/etc/letsencrypt/live/james016.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/james016.com/fullchain.pem'),
 };
 
+const httpServer = http.createServer((req, res) => {
+  const host = req.headers.host;
+  res.writeHead(301, { Location: `https://${host}${req.url}` });
+  res.end();
+});
 
-// 添加错误处理程序
-proxy.on('error', (err, req, socketOrRes) => {
-    console.error(`Error occurred while proxying request: ${err.message}`);
-    if (socketOrRes.writeHead) {
-      socketOrRes.writeHead(502, { 'Content-Type': 'text/plain' });
-      socketOrRes.end('An error occurred while proxying the request.');
-    } else {
-      socketOrRes.destroy();
-    }
-  });
-  
-
-const server = https.createServer(options, (req, res) => {
+const httpsServer = https.createServer(options, (req, res) => {
   const url = req.url;
 
   if (url.startsWith('/socket')) {
@@ -37,7 +29,7 @@ const server = https.createServer(options, (req, res) => {
 });
 
 // 代理WebSocket连接
-server.on('upgrade', (req, socket, head) => {
+httpsServer.on('upgrade', (req, socket, head) => {
   const url = req.url;
 
   if (url.startsWith('/socket')) {
@@ -49,8 +41,14 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-const port = 443;
+const httpPort = 80;
+const httpsPort = 443;
 
-server.listen(port, () => {
-  console.log('Proxy server is running on http://localhost:' + port);
+httpServer.listen(httpPort, () => {
+  console.log(`HTTP server is running on port ${httpPort}`);
 });
+
+httpsServer.listen(httpsPort, () => {
+  console.log(`HTTPS server is running on port ${httpsPort}`);
+});
+
