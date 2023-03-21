@@ -36,7 +36,7 @@ class TrackingWebSocket extends WebSocket {
   
 
 // 请根据实际情况替换以下websocket地址
-const websocket = new TrackingWebSocket('wss://two_cars_demo.iap.hh-d.brainpp.cn/socket');
+const websocket = new TrackingWebSocket('wss://james016.com/socket');
 // const websocket = new TrackingWebSocket('wss://diffusion-webui.iap.hh-d.brainpp.cn/');
 
 // 获取DOM元素

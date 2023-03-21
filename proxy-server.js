@@ -1,7 +1,16 @@
 const http = require('http');
 const httpProxy = require('http-proxy');
+const fs = require('fs');
 
 const proxy = httpProxy.createProxyServer();
+
+const https = require('https');
+
+const options = {
+	  key: fs.readFileSync('/etc/letsencrypt/live/james016.com/privkey.pem'),
+	  cert: fs.readFileSync('/etc/letsencrypt/live/james016.com/fullchain.pem')
+};
+
 
 // 添加错误处理程序
 proxy.on('error', (err, req, socketOrRes) => {
@@ -15,7 +24,7 @@ proxy.on('error', (err, req, socketOrRes) => {
   });
   
 
-const server = http.createServer((req, res) => {
+const server = https.createServer(options, (req, res) => {
   const url = req.url;
 
   if (url.startsWith('/socket')) {
@@ -40,6 +49,8 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-server.listen(10000, () => {
-  console.log('Proxy server is running on http://localhost:10000');
+const port = 443;
+
+server.listen(port, () => {
+  console.log('Proxy server is running on http://localhost:' + port);
 });
