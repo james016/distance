@@ -120,17 +120,17 @@ function refreshDistances() {
     const now = new Date();
 
     recentPositions.push({ latitude, longitude, timestamp: now });
-    console.log(recentPositions);
 
-    // 保持最近 10 个位置
-    if (recentPositions.length > 10) {
+    // 保持最近 100 个位置
+    if (recentPositions.length > 100) {
       recentPositions.shift();
     }
   
     const currentPos = { latitude, longitude };
     recentPositions.slice(0, -1).forEach((prevPos, index) => {
-      const distanceDiff = calculateDistanceDiff(currentPos, prevPos);
-      const timeDiff = (now.getTime() - prevPos.timestamp.getTime()) / 1000;
+      const nextPos = recentPositions[index + 1];
+      const distanceDiff = calculateDistanceDiff(nextPos, prevPos);
+      const timeDiff = (nextPos.timestamp.getTime() - prevPos.timestamp.getTime()) / 1000;
 
       updateRecentPositionsList(index, distanceDiff, timeDiff);
     });
@@ -186,8 +186,8 @@ function updateRecentPositionsList(index, distanceDiff, timeDiff) {
   } else {
     const listItem = document.createElement('li');
     listItem.setAttribute('data-index', index);
-    listItem.innerHTML = `距离差: <span class="distance-diff">${distanceDiff.toFixed(1)}</span>米, 时间差: <span class="time-diff">${timeDiff.toFixed(1)}</span>秒`;
-    recentPositionsList.appendChild(listItem);
+    listItem.innerHTML = `${index}. 距离差: <span class="distance-diff">${distanceDiff.toFixed(1)}</span>米, 时间差: <span class="time-diff">${timeDiff.toFixed(1)}</span>秒`;
+    recentPositionsList.insertBefore(listItem, recentPositionsList.firstChild);
   }
 }
   
