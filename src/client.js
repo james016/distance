@@ -1,42 +1,7 @@
-class TrackingWebSocket extends WebSocket {
-    constructor(url) {
-      super(url);
-      this.listeners = {};
-    }
-  
-    addEventListener(type, listener) {
-      if (!this.listeners[type]) {
-        this.listeners[type] = [];
-      }
-      this.listeners[type].push(listener);
-      super.addEventListener(type, listener);
-    }
-  
-    removeEventListener(type, listener) {
-      if (this.listeners[type]) {
-        const index = this.listeners[type].indexOf(listener);
-        if (index !== -1) {
-          this.listeners[type].splice(index, 1);
-        }
-      }
-      super.removeEventListener(type, listener);
-    }
-
-    dispatchEvent(event) {
-        if (this.listeners[event.type]) {
-          this.listeners[event.type].forEach(listener => listener.call(this, event));
-        }
-        return super.dispatchEvent(event);
-      }
-  
-    getListeners(type) {
-      return this.listeners[type] || [];
-    }
-  }
-  
-
 const socketUrl = 'wss://james016.com/socket';
-let websocket = new TrackingWebSocket(socketUrl);
+let websocket = new WebSocket(socketUrl);
+
+const recentPositions = [];
 
 // 获取DOM元素
 const userId = document.getElementById('userId');
@@ -140,7 +105,7 @@ function leaveRoom() {
 }
 
 function reconnect() {
-  websocket = new TrackingWebSocket(socketUrl);
+  websocket = new WebSocket(socketUrl);
   
   websocket.addEventListener('open', onOpen);
   websocket.addEventListener('message', onMessage);
@@ -150,9 +115,25 @@ function reconnect() {
 }
 
 function refreshDistances() {
-
   navigator.geolocation.getCurrentPosition((position) => {
     const { latitude, longitude } = position.coords;
+    const now = new Date();
+
+    recentPositions.push({ latitude, longitude, timestamp: now });
+    console.log(recentPositions);
+
+    // 保持最近 10 个位置
+    if (recentPositions.length > 10) {
+      recentPositions.shift();
+    }
+  
+    const currentPos = { latitude, longitude };
+    recentPositions.slice(0, -1).forEach((prevPos, index) => {
+      const distanceDiff = calculateDistanceDiff(currentPos, prevPos);
+      const timeDiff = (now.getTime() - prevPos.timestamp.getTime()) / 1000;
+
+      updateRecentPositionsList(index, distanceDiff, timeDiff);
+    });
 
     if (websocket.readyState === WebSocket.CONNECTING) {
       websocket.addEventListener('open', () => {
@@ -169,7 +150,6 @@ function refreshDistances() {
       console.error('WebSocket is not in the correct state to send a message.');
     }
 
-    const now = new Date();
     lastRefreshTime.textContent = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
     wsStatus.textContent = websocket.readyState;
   });
@@ -194,4 +174,34 @@ function deleteDistance(otherUserId) {
     if (existingItem) {
         distanceList.removeChild(existingItem);
     }
+}
+
+function updateRecentPositionsList(index, distanceDiff, timeDiff) {
+  const recentPositionsList = document.getElementById('recentPositionsList');
+  const existingItem = recentPositionsList.querySelector(`[data-index="${index}"]`);
+  
+  if (existingItem) {
+    existingItem.querySelector('.distance-diff').textContent = distanceDiff.toFixed(1);
+    existingItem.querySelector('.time-diff').textContent = timeDiff.toFixed(1);
+  } else {
+    const listItem = document.createElement('li');
+    listItem.setAttribute('data-index', index);
+    listItem.innerHTML = `距离差: <span class="distance-diff">${distanceDiff.toFixed(1)}</span>米, 时间差: <span class="time-diff">${timeDiff.toFixed(1)}</span>秒`;
+    recentPositionsList.appendChild(listItem);
+  }
+}
+  
+// 计算两个地理坐标之间的距离
+function calculateDistanceDiff(pos1, pos2) {
+  const R = 6371; // 地球半径，单位：公里
+  const lat1 = pos1.latitude * (Math.PI / 180);
+  const lat2 = pos2.latitude * (Math.PI / 180);
+  const dLat = (pos2.latitude - pos1.latitude) * (Math.PI / 180);
+  const dLon = (pos2.longitude - pos1.longitude) * (Math.PI / 180);
+  
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c;
+  
+  return d * 1000; // 转换为米
 }
