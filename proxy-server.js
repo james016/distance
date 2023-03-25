@@ -5,6 +5,13 @@ const fs = require('fs');
 
 const proxy = httpProxy.createProxyServer();
 
+proxy.on('error', (err, req, res) => {
+  console.error('Proxy error:', err);
+  res.writeHead(500, { 'Content-Type': 'text/plain' });
+  res.end('An internal error occurred. Please try again later.');
+});
+
+
 const options = {
   key: fs.readFileSync('/etc/letsencrypt/live/james016.com/privkey.pem'),
   cert: fs.readFileSync('/etc/letsencrypt/live/james016.com/fullchain.pem'),

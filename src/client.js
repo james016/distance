@@ -45,7 +45,7 @@ function onMessage(event) {
       userId.textContent = data.userId;
       break;
     case 'distance':
-      updateDistanceList(data.userId, data.distance);
+      updateDistanceList(data.userId, data.distance, data.accuracy);
       break;
     case 'leaveRoom':
       deleteDistance(data.userId);
@@ -67,14 +67,14 @@ function joinRoom() {
   }
 
   navigator.geolocation.getCurrentPosition((position) => {
-    const { latitude, longitude } = position.coords;
+    const { latitude, longitude, accuracy } = position.coords;
 
     if (websocket.readyState === WebSocket.CONNECTING) {
         websocket.addEventListener('open', () => {
-        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude } }));
+        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy } }));
         });
     } else if (websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude } }));
+        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy } }));
     } else {
         console.error('WebSocket is not in the correct state to send a message.');
     }
@@ -116,31 +116,33 @@ function reconnect() {
 
 function refreshDistances() {
   navigator.geolocation.getCurrentPosition((position) => {
-    const { latitude, longitude } = position.coords;
+    const { latitude, longitude, accuracy } = position.coords;
+    console.log('Current position:', position);
     const now = new Date();
 
-    recentPositions.push({ latitude, longitude, timestamp: now });
+    recentPositions.push({ latitude, longitude, accuracy, timestamp: now });
 
     // 保持最近 100 个位置
     if (recentPositions.length > 100) {
       recentPositions.shift();
     }
   
-    const currentPos = { latitude, longitude };
+    const currentPos = { latitude, longitude, accuracy };
     recentPositions.slice(0, -1).forEach((prevPos, index) => {
       const nextPos = recentPositions[index + 1];
       const distanceDiff = calculateDistanceDiff(nextPos, prevPos);
       const timeDiff = (nextPos.timestamp.getTime() - prevPos.timestamp.getTime()) / 1000;
+      const accuracyAll = Math.pow((Math.pow(prevPos.accuracy, 2) + Math.pow(nextPos.accuracy, 2)), 0.5);
 
-      updateRecentPositionsList(index, distanceDiff, timeDiff);
+      updateRecentPositionsList(index, distanceDiff, timeDiff, accuracyAll);
     });
 
     if (websocket.readyState === WebSocket.CONNECTING) {
       websocket.addEventListener('open', () => {
-        websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude } }));
+        websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy } }));
       });
     } else if (websocket.readyState === WebSocket.OPEN) {
-      websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude } }));
+      websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy } }));
     } else if (websocket.readyState === WebSocket.CLOSED) {
       console.log(websocket.readyState)
       reconnect();
@@ -156,15 +158,16 @@ function refreshDistances() {
 }
 
 
-function updateDistanceList(otherUserId, distance) {
+function updateDistanceList(otherUserId, distance, accuracy) {
   const existingItem = distanceList.querySelector(`[data-user-id="${otherUserId}"]`);
+  const content = `${(distance*1000).toFixed(1)} ± ${accuracy.toFixed(1)}`;
 
   if (existingItem) {
-    existingItem.querySelector('.distance').textContent = (distance*1000).toFixed(1);
+    existingItem.querySelector('.distance').textContent = content;
   } else {
     const listItem = document.createElement('li');
     listItem.setAttribute('data-user-id', otherUserId);
-    listItem.innerHTML = `用户 ${otherUserId}: <span class="distance">${(distance*1000).toFixed(1)}</span>米`;
+    listItem.innerHTML = `用户 ${otherUserId}: <span class="distance">${content}</span>米`;
     distanceList.appendChild(listItem);
   }
 }
@@ -176,17 +179,18 @@ function deleteDistance(otherUserId) {
     }
 }
 
-function updateRecentPositionsList(index, distanceDiff, timeDiff) {
+function updateRecentPositionsList(index, distanceDiff, timeDiff, accuracy) {
   const recentPositionsList = document.getElementById('recentPositionsList');
   const existingItem = recentPositionsList.querySelector(`[data-index="${index}"]`);
+  const distance = `${distanceDiff.toFixed(1)} ± ${accuracy.toFixed(1)}`
   
   if (existingItem) {
-    existingItem.querySelector('.distance-diff').textContent = distanceDiff.toFixed(1);
+    existingItem.querySelector('.distance-diff').textContent = distance;
     existingItem.querySelector('.time-diff').textContent = timeDiff.toFixed(1);
   } else {
     const listItem = document.createElement('li');
     listItem.setAttribute('data-index', index);
-    listItem.innerHTML = `${index}. 距离差: <span class="distance-diff">${distanceDiff.toFixed(1)}</span>米, 时间差: <span class="time-diff">${timeDiff.toFixed(1)}</span>秒`;
+    listItem.innerHTML = `${index}. 距离差: <span class="distance-diff">${distance}</span>米, 时间差: <span class="time-diff">${timeDiff.toFixed(1)}</span>秒`;
     recentPositionsList.insertBefore(listItem, recentPositionsList.firstChild);
   }
 }

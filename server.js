@@ -118,10 +118,10 @@ function joinRoom(userId, roomId, position) {
       if (otherUserId === userId) return;
   
       const otherUser = users.get(otherUserId);
-      const distance = calculateDistance(position, otherUser.position);
+      const {distance, accuracy} = calculateDistance(position, otherUser.position);
   
-      user.ws.send(JSON.stringify({ type: 'distance', distance, userId: otherUserId }));
-      otherUser.ws.send(JSON.stringify({ type: 'distance', distance, userId }));
+      user.ws.send(JSON.stringify({ type: 'distance', distance, userId: otherUserId, accuracy }));
+      otherUser.ws.send(JSON.stringify({ type: 'distance', distance, userId, accuracy }));
     });
   }
   
@@ -141,9 +141,16 @@ function joinRoom(userId, roomId, position) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     
     const distance = R * c; // 距离（千米）
-    return distance;
-    }
+    const accuracy = Math.pow(Math.pow(position1.accuracy, 2) + Math.pow(position2.accuracy, 2), 0.5);
+    return {distance, accuracy};
+  }
   
+  // coordsWithTimestamps = [
+  //   {latitude: 12.34567, longitude: 34.56789, accuracy: 10, timestamp: 1000},
+  //   {latitude: 12.34678, longitude: 34.56890, accuracy: 5, timestamp: 2000},
+  //   {latitude: 12.34789, longitude: 34.56901, accuracy: 3, timestamp: 3000},
+  // ]
+  // calculateDistance(coordsWithTimestamps[0], coordsWithTimestamps[1]);
   
   
 server.listen(10002, () => {
