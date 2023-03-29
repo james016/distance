@@ -68,13 +68,14 @@ function joinRoom() {
 
   navigator.geolocation.getCurrentPosition((position) => {
     const { latitude, longitude, accuracy } = position.coords;
+    const timestamp = new Date(position.timestamp);
 
     if (websocket.readyState === WebSocket.CONNECTING) {
         websocket.addEventListener('open', () => {
-        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy } }));
+        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy, timestamp } }));
         });
     } else if (websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy } }));
+        websocket.send(JSON.stringify({ type: 'joinRoom', roomId: room, position: { latitude, longitude, accuracy, timestamp } }));
     } else {
         console.error('WebSocket is not in the correct state to send a message.');
     }
@@ -118,9 +119,10 @@ function refreshDistances() {
   navigator.geolocation.getCurrentPosition((position) => {
     const { latitude, longitude, accuracy } = position.coords;
     console.log('Current position:', position);
-    const now = new Date();
+    const now = new Date(position.timestamp);
+    const timestamp = now;
 
-    recentPositions.push({ latitude, longitude, accuracy, timestamp: now });
+    recentPositions.push({ latitude, longitude, accuracy, timestamp });
 
     // 保持最近 100 个位置
     if (recentPositions.length > 100) {
@@ -139,10 +141,10 @@ function refreshDistances() {
 
     if (websocket.readyState === WebSocket.CONNECTING) {
       websocket.addEventListener('open', () => {
-        websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy } }));
+        websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy, timestamp } }));
       });
     } else if (websocket.readyState === WebSocket.OPEN) {
-      websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy } }));
+      websocket.send(JSON.stringify({ type: 'refreshDistances', position: { latitude, longitude, accuracy, timestamp } }));
     } else if (websocket.readyState === WebSocket.CLOSED) {
       console.log(websocket.readyState)
       reconnect();

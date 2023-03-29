@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .alert {
+      color: red;
+      font-weight: bold;
+      background-color: yellow;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
     <title>共享测距</title>
 </head>
 <body>
@@ -20,6 +29,9 @@
     <div>
         <h3>webSocket status: <span id="wsStatus">未刷新</span> </h3>
     </div>
+  <div class="alert">
+ 注意：请在后台打开高德地图，并随意导航到某地址（保证高德地图一直在后台刷新 GPS 信号），才能保证当前地址的准确。
+  </div>
     <div>
         <h2>距离列表:</h2>
         <ul id="distanceList"></ul>

@@ -7,10 +7,84 @@ const wss = new WebSocket.Server({ server });
 const users = new Map();
 const rooms = new Map();
 
+// 定义 position
+class PositionManager {
+  constructor(ws, options = { maxPositions: 10 }) {
+    this.ws = ws;
+    this.roomId = null;
+    this._positions = [];
+    this.options = options;
+  }
+
+  set position(position) {
+    this.setPosition(position);
+  }
+
+  get position() {
+    return this.getLatestPosition();
+  }
+
+  setPosition(position) {
+    this._positions.push(position);
+
+    // 保持位置列表长度
+    if (this._positions.length > this.options.maxPositions) {
+      this._positions.shift();
+    }
+  }
+
+  getLatestPosition() {
+    return this._positions[this._positions.length - 1] || null;
+  }
+
+  getLatestTimestamp() {
+    const latestPosition = this.getLatestPosition();
+    return latestPosition ? latestPosition.timestamp : null;
+  }
+
+  getPosition(timestamp) {
+    const targetTime = new Date(timestamp);
+
+    if (this._positions.length === 0) {
+      return null;
+    }
+
+    if (targetTime <= this._positions[0].timestamp) {
+      return this._positions[0];
+    }
+
+    if (targetTime >= this._positions[this._positions.length - 1].timestamp) {
+      return this._positions[this._positions.length - 1];
+    }
+
+    for (let i = 1; i < this._positions.length; i++) {
+      if (this._positions[i].timestamp >= targetTime) {
+        // 使用线性插值
+        const prevPos = this._positions[i - 1];
+        const nextPos = this._positions[i];
+        const factor = (targetTime - prevPos.timestamp) / (nextPos.timestamp - prevPos.timestamp);
+        const latitude = prevPos.latitude + factor * (nextPos.latitude - prevPos.latitude);
+        const longitude = prevPos.longitude + factor * (nextPos.longitude - prevPos.longitude);
+        const accuracy = prevPos.accuracy + factor * (nextPos.accuracy - prevPos.accuracy);
+
+        return {
+          latitude,
+          longitude,
+          accuracy,
+          timestamp: targetTime,
+        };
+      }
+    }
+
+    return null;
+  }
+}
+
+
 wss.on('connection', (ws) => {
   // 生成用户ID
   const userId = generateUserId();
-  users.set(userId, { ws, roomId: null });
+  users.set(userId, new PositionManager(ws));
   console.log(`User ${userId} connected`);
   ws.send(JSON.stringify({ type: 'userId', userId }));
   console.log(`reply: User ${userId} connected`);
@@ -118,13 +192,25 @@ function joinRoom(userId, roomId, position) {
       if (otherUserId === userId) return;
   
       const otherUser = users.get(otherUserId);
-      const {distance, accuracy} = calculateDistance(position, otherUser.position);
+
+      const minTime = minTimestamp(user.getLatestTimestamp(), otherUser.getLatestTimestamp())
+      const timestamp = minTime;
+      // const position1 = user.getPosition(minTime);
+      // const position2 = otherUser.getPosition(minTime);
+      const position1 = user.position;
+      const position2 = otherUser.position;
+      if (position1 === null || position2 === null) return;
+      const {distance, accuracy} = calculateDistance(position1, position2);
   
-      user.ws.send(JSON.stringify({ type: 'distance', distance, userId: otherUserId, accuracy }));
-      otherUser.ws.send(JSON.stringify({ type: 'distance', distance, userId, accuracy }));
+      user.ws.send(JSON.stringify({ type: 'distance', distance, userId: otherUserId, accuracy, timestamp }));
+      otherUser.ws.send(JSON.stringify({ type: 'distance', distance, userId, accuracy, timestamp }));
     });
   }
   
+function minTimestamp(time1, time2) {
+    if (time1 < time2) return time1;
+    return time2;
+}
 
   function calculateDistance(position1, position2) {
     // 使用haversine公式计算地球上两点之间的距离
