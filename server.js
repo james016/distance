@@ -25,6 +25,7 @@ class PositionManager {
   }
 
   setPosition(position) {
+    position.timestamp = new Date(position.timestamp);
     this._positions.push(position);
 
     // 保持位置列表长度
@@ -195,10 +196,11 @@ function joinRoom(userId, roomId, position) {
 
       const minTime = minTimestamp(user.getLatestTimestamp(), otherUser.getLatestTimestamp())
       const timestamp = minTime;
-      // const position1 = user.getPosition(minTime);
-      // const position2 = otherUser.getPosition(minTime);
-      const position1 = user.position;
-      const position2 = otherUser.position;
+      const position1 = user.getPosition(minTime);
+      const position2 = otherUser.getPosition(minTime);
+//      console.log(position11, position21);
+//      const position1 = user.position;
+//      const position2 = otherUser.position;
       if (position1 === null || position2 === null) return;
       const {distance, accuracy} = calculateDistance(position1, position2);
   

@@ -45,7 +45,7 @@ function onMessage(event) {
       userId.textContent = data.userId;
       break;
     case 'distance':
-      updateDistanceList(data.userId, data.distance, data.accuracy);
+      updateDistanceList(data.userId, data.distance, data.accuracy, data.timestamp);
       break;
     case 'leaveRoom':
       deleteDistance(data.userId);
@@ -160,16 +160,17 @@ function refreshDistances() {
 }
 
 
-function updateDistanceList(otherUserId, distance, accuracy) {
+function updateDistanceList(otherUserId, distance, accuracy, timestamp) {
   const existingItem = distanceList.querySelector(`[data-user-id="${otherUserId}"]`);
-  const content = `${(distance*1000).toFixed(1)} ± ${accuracy.toFixed(1)}`;
+  const timestampDiff = (new Date(timestamp) - new Date()) / 1000;
+  const content = `${(distance*1000).toFixed(1)} ± ${accuracy.toFixed(1)}米，时间差：${timestampDiff.toFixed(1)}秒`;
 
   if (existingItem) {
     existingItem.querySelector('.distance').textContent = content;
   } else {
     const listItem = document.createElement('li');
     listItem.setAttribute('data-user-id', otherUserId);
-    listItem.innerHTML = `用户 ${otherUserId}: <span class="distance">${content}</span>米`;
+    listItem.innerHTML = `用户 ${otherUserId}: <span class="distance">${content}</span>`;
     distanceList.appendChild(listItem);
   }
 }
